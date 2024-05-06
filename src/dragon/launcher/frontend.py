@@ -946,8 +946,10 @@ Performance may be suboptimal.'''
                     log.info("Acquiring network config via WLM queries")
                     # This sigint trigger is -2 and -1 cases
                     self.net = NetworkConfig.from_wlm(workload_manager=self._wlm,
-                                                      port=dfacts.DEFAULT_OVERLAY_NETWORK_PORT,
-                                                      network_prefix=dfacts.DEFAULT_TRANSPORT_NETIF,
+                                                      port=self.port, # test Eric's mod
+                                                      network_prefix=self.network_prefix, # test Eric's mod
+                                                      #port=dfacts.DEFAULT_OVERLAY_NETWORK_PORT,
+                                                      #network_prefix=dfacts.DEFAULT_TRANSPORT_NETIF,
                                                       hostlist=self.hostlist,
                                                       sigint_trigger=self._sigint_trigger)
                 except Exception:

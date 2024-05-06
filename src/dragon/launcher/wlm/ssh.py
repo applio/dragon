@@ -17,34 +17,52 @@ from .base import BaseNetworkConfig
 #       It's garbage otherwise. Longterm, we have to figure out
 #       how to propagate Dragon out absent a shared filesystem.
 ENV_VARS = None
+BASE_ENV_VARNAMES = (
+    'DRAGON_BASE_DIR',
+    'DRAGON_VERSION',
+    'DRAGON_HSTA_DEBUG',
+    'PATH',
+    'PYTHONPATH',
+    'LD_LIBRARY_PATH',
+    'PYTHONSTARTUP',
+    'VIRTUAL_ENV',
+)
 
-
-def get_ssh_env_vars(args_map=None) -> list[str]:
+def get_ssh_env_vars(args_map=None, propagate_base=BASE_ENV_VARNAMES) -> list[str]:
 
     global ENV_VARS
-    ENV_VARS = f"""DRAGON_BASE_DIR={environ.get('DRAGON_BASE_DIR','')} \
-                   DRAGON_VERSION={environ.get('DRAGON_VERSION', '')} \
-                   DRAGON_HSTA_DEBUG={environ.get('DRAGON_HSTA_DEBUG',"")} \
-                   PATH={environ.get('PATH', '')} \
-                   PYTHONPATH={environ.get('PYTHONPATH', '')} \
-                   LD_LIBRARY_PATH={environ.get('LD_LIBRARY_PATH', '')} \
-                   PYTHONSTARTUP={environ.get('PYTHONSTARTUP', '')} \
-                   VIRTUAL_ENV={environ.get('VIRTUAL_ENV', '')} \
-                """
-    local_env = ENV_VARS
+    # ENV_VARS = f"""DRAGON_BASE_DIR={environ.get('DRAGON_BASE_DIR','')} \
+    #                DRAGON_VERSION={environ.get('DRAGON_VERSION', '')} \
+    #                DRAGON_HSTA_DEBUG={environ.get('DRAGON_HSTA_DEBUG',"")} \
+    #                PATH={environ.get('PATH', '')} \
+    #                PYTHONPATH={environ.get('PYTHONPATH', '')} \
+    #                LD_LIBRARY_PATH={environ.get('LD_LIBRARY_PATH', '')} \
+    #                PYTHONSTARTUP={environ.get('PYTHONSTARTUP', '')} \
+    #                VIRTUAL_ENV={environ.get('VIRTUAL_ENV', '')} \
+    #             """
+    ENV_VARS = [
+        f'{varname}={environ.get(varname, "")}' for varname in propagate_base
+    ]
+    #local_env = ENV_VARS
+
     # Make sure we propogate the device logging
     try:
-        for log_device, log_level in args_map['log_device_level_map'].items():
+        #for log_device, log_level in args_map['log_device_level_map'].items():
 
-            local_env = " ".join([local_env, f"{log_device}={log_level}"])
+            #local_env = " ".join([local_env, f"{log_device}={log_level}"])
+        local_env = [f"{log_device}={log_level}" for log_device, log_level in args_map['log_device_level_map'].items()]
     except (KeyError, TypeError):
-        pass
+        local_env = []
+        #pass
+    ENV_VARS.extend(local_env)
 
     # Construct a list of all the environment variables
-    all_envs = [f'{var}={quote(val)}' for var, val in this_process.env().items()]
-    all_envs.append(local_env)
+    this_process_envs = [f'{var}={quote(val)}' for var, val in this_process.env().items()]
+    #all_envs = [f'{var}={quote(val)}' for var, val in this_process.env().items()]
+    #all_envs.append(local_env)
+    ENV_VARS.extend(this_process_envs)
 
-    ENV_VARS = all_envs
+    #ENV_VARS = all_envs
 
 
 def get_ssh_launch_be_args(hostname=None, args_map=None) -> str:
@@ -238,6 +256,9 @@ class SSHSubprocessPopen():
 
 class SSHNetworkConfig(BaseNetworkConfig):
 
+    def _get_wlm_job_id(self):
+        raise RuntimeError('testing Eric fix')
+
     def __init__(self, network_prefix, port, hostlist):
 
         super().__init__(
@@ -248,9 +269,6 @@ class SSHNetworkConfig(BaseNetworkConfig):
     @classmethod
     def check_for_wlm_support(cls) -> bool:
         return shutil.which("ssh")
-
-    def _get_wlm_job_id(self) -> str:
-        raise RuntimeError('SSHNetworkConfig does not implement _get_wlm_job_id')
 
     def _supports_net_conf_cache(self) -> bool:
         return False
