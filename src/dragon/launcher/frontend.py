@@ -632,7 +632,10 @@ Please resubmit your dragon launch command with the `--transport tcp` option set
                         fe_ip_addr: str,
                         fe_host_id: str,
                         frontend_sdesc: str,
-                        network_prefix: str):
+                        network_prefix: str,
+                        *,
+                        node_ip_addrs: list[str] = None,
+    ):
         """Launch backend with selected wlm"""
         log = logging.getLogger(dls.LA_FE).getChild('_launch_backend')
         try:
@@ -652,7 +655,7 @@ Please resubmit your dragon launch command with the `--transport tcp` option set
         except Exception:
             raise RuntimeError("Unable to construct backend launcher arg list")
 
-        the_env = dict(os.environ)
+        import os; the_env = dict(os.environ)
         the_env['DRAGON_NETWORK_CONFIG'] = self.net.compress()
 
         # TODO: The differentiation between the SSH path vs. other paths
@@ -685,14 +688,19 @@ Please resubmit your dragon launch command with the `--transport tcp` option set
             try:
                 popen_dict = {}
 
-                for host in nodelist:
+                import sys, os; print(f"===DMP===> frontend {os.getpid()=} {os.getppid()=} {nodelist=} {[(x, os.environ.get(x)) for x in os.environ if x.startswith('DRAGON_RT_UID')]}", file=sys.stderr, flush=True)
+                for host_name, host_ip_addr in zip(nodelist, node_ip_addrs):
                     args = dlutil.get_wlm_launch_args(args_map=self.args_map,
-                                                      hostname=host,
+                                                      hostname=host_name,
                                                       wlm=self._wlm)
-                    args = args + be_args
+                    rt_uid = os.environ['DRAGON_RT_UID']
+                    args = (
+                        args + [f'DRAGON_RT_UID={rt_uid}', f'DRAGON_RT_UID__{rt_uid}={frontend_sdesc!r}'] + be_args +
+                        ['--backend-ip-addr', host_ip_addr, '--backend-hostname', host_name]
+                    )
                     log.info(f"SSH launch config: {args}")
 
-                    popen_dict[host] = subprocess.Popen(
+                    popen_dict[host_name] = subprocess.Popen(
                                            args=args,
                                            stdin=subprocess.DEVNULL,
                                            stdout=subprocess.DEVNULL,
@@ -965,18 +973,20 @@ Performance may be suboptimal.'''
         # Add the frontend config
         self.net_conf['f'] = NodeDescriptor.get_local_node_network_conf(network_prefix=self.network_prefix,
                                                                         port_range=dfacts.DEFAULT_FRONTEND_PORT)
-        fe_host_id = str(self.net_conf['f'].host_id)
-        fe_ip_addr = self.net_conf['f'].ip_addrs[0]  # it includes the port
+        fe_host_id = os.getenv('DRAGON_FE_HOST_ID', str(self.net_conf['f'].host_id))
+        fe_ip_addr = os.getenv('DRAGON_FE_IP_ADDR', self.net_conf['f'].ip_addrs[0])  # it includes the port
+        if fe_ip_addr != self.net_conf['f'].ip_addrs[0]:
+            self.net_conf['f'].ip_addrs.insert(0, fe_ip_addr)
         log.debug(f'network config: {self.net_conf}')
         
         # this will raise an OSError when the frontend is run on a compute node w/o external access 
         try:
-            fe_ext_ip_addr = get_external_ip_addr().split(':')[0]
+            fe_ext_ip_addr = os.getenv('DRAGON_FE_EXTERNAL_IP_ADDR', get_external_ip_addr().split(':')[0])
         except OSError:
             fe_ext_ip_addr = None
 
         # this will exist even w/o external access 
-        head_node_ip_addr = self.net_conf['0'].ip_addrs[0].split(':')[0]
+        head_node_ip_addr = self.net_conf['0'].ip_addrs[0].split(':')[0]  # TODO: again grabbing 0th ip addr is fragile needs fix!
         os.environ['DRAGON_HEAD_NODE_IP_ADDR'] = head_node_ip_addr
         
         if fe_ext_ip_addr is not None: 
@@ -1102,8 +1112,8 @@ Performance may be suboptimal.'''
         if self._sigint_trigger == 4:
             signal.raise_signal(signal.SIGINT)
 
-        # Start the backend
-        log.debug("standing up backend")
+        # Start the backend  # TODO: this is duplicated; can remove part or all
+        log.debug("started up backend")
         # we need to send to backend only the ip_addr and host_id of the frontend
         log.debug(f"fe_ip_addr={fe_ip_addr}, fe_host_id={fe_host_id}")
 
@@ -1115,7 +1125,8 @@ Performance may be suboptimal.'''
                                                  fe_ip_addr=fe_ip_addr,
                                                  fe_host_id=fe_host_id,
                                                  frontend_sdesc=encoded_inbound_str,
-                                                 network_prefix=self.network_prefix)
+                                                 network_prefix=self.network_prefix,
+                                                 node_ip_addrs=ip_addrs[1:])
         except Exception as e:
             log.fatal('FE failed to stand up BE')
             log.debug(f'error: {e}')

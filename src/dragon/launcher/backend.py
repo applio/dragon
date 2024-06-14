@@ -8,7 +8,7 @@ from enum import Enum
 from functools import total_ordering
 from time import sleep
 
-from ..utils import B64
+from ..utils import B64, host_id as get_host_id
 from ..managed_memory import MemoryPool, DragonPoolError, DragonMemoryError
 from ..channels import Channel, register_gateways_from_env, ChannelError, discard_gateways
 
@@ -525,7 +525,12 @@ class LauncherBackEnd:
                     arg_ip_addr: str,
                     arg_host_id: str,
                     frontend_sdesc: B64,
-                    level=logging.INFO, fname=None):
+                    level=logging.INFO,
+                    fname=None,
+                    *,
+                    backend_ip_addr=None,
+                    backend_hostname=None,
+    ):
         """Begin bringup of backend services
 
         :param arg_ip_addr: IP address of frontened with port appended
@@ -550,9 +555,14 @@ class LauncherBackEnd:
             # which we do for unit tests. So pass on this
             log.debug("Unable to do signal handling outside of main thread")
 
-        net_conf = NodeDescriptor.get_local_node_network_conf()
-        self.host_id = int(net_conf.host_id)
-        self.hostname = net_conf.name
+        # Propagate information passed on command-line or discover if needed.
+        if not (backend_hostname and backend_ip_addr):
+            net_conf = NodeDescriptor.get_local_node_network_conf(network_prefix=self.network_prefix)
+            self.host_id = int(net_conf.host_id)
+        else:
+            self.host_id = get_host_id()
+        self.hostname = backend_hostname or net_conf.name
+        self.transport_agent_ipaddr = backend_ip_addr or net_conf.ip_addrs[0]
 
         conn_options = ConnectionOptions(min_block_size=2 ** 16)
         conn_policy = POLICY_INFRASTRUCTURE
@@ -615,7 +625,7 @@ class LauncherBackEnd:
         # start my transport agent
         # Add my own host_id and ip_addr to frontend's
         host_ids = [arg_host_id, str(self.host_id)]
-        ip_addrs = [arg_ip_addr, net_conf.ip_addrs[0]]  # it includes the port
+        ip_addrs = [arg_ip_addr, self.transport_agent_ipaddr]  # it includes the port
         log.debug(f'standing up tcp agent with gw: {encoded_ser_gw_str}, host_ids={host_ids}, and ip_addrs={ip_addrs}')
         self.dragon_logger = setup_dragon_logging(node_index=0)
 
