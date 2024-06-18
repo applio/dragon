@@ -5427,14 +5427,14 @@ class LAChannelsInfo(InfraMsg):
     _tc = MessageTypes.LA_CHANNELS_INFO
 
     def __init__(self, tag, nodes_desc, gs_cd, num_gw_channels, port=dfacts.DEFAULT_TRANSPORT_PORT,
-                 transport=str(dfacts.TransportAgentOptions.TCP), _tc=None):
+                 transport=str(dfacts.TransportAgentOptions.TCP), _tc=None, *, fe_ext_ip_addr=None):
         super().__init__(tag)
 
         self.gs_cd = gs_cd
         self.transport = dfacts.TransportAgentOptions.from_str(transport)
         self.num_gw_channels = num_gw_channels
         try:
-            self.fe_ext_ip_addr = get_external_ip_addr()
+            self.fe_ext_ip_addr = fe_ext_ip_addr if fe_ext_ip_addr else get_external_ip_addr()
         except OSError:
             self.fe_ext_ip_addr = None
 

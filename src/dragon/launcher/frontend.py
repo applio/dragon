@@ -1157,6 +1157,15 @@ Performance may be suboptimal.'''
             assert isinstance(ch_up, dmsg.SHChannelsUp), 'la_fe received invalid channel up'
         log.info(f'received {self.nnodes} SHChannelsUP msgs')
 
+        # Replace dynamically discovered IP addresses with those specified in network config.
+        for ch_up in chs_up:
+            try:
+                conveyed_ip_addrs = self.net_conf[str(ch_up.idx)].ip_addrs
+                if conveyed_ip_addrs:
+                    ch_up.node_desc.ip_addrs[:] = [ ipaddr.split(':', 1)[0] for ipaddr in conveyed_ip_addrs ]
+            except:
+                pass
+
         nodes_desc = {ch_up.idx: ch_up.node_desc for ch_up in chs_up}
         gs_cds = [ch_up.gs_cd for ch_up in chs_up if ch_up.gs_cd is not None]
         if len(gs_cds) == 0:
@@ -1196,7 +1205,8 @@ Performance may be suboptimal.'''
         la_ch_info = dmsg.LAChannelsInfo(tag=dlutil.next_tag(), nodes_desc=nodes_desc,
                                          gs_cd=gs_cd, num_gw_channels=num_gw_channels,
                                          port=self.port,
-                                         transport=str(self.transport))
+                                         transport=str(self.transport),
+                                         fe_ext_ip_addr=fe_ext_ip_addr)
         log.debug(f'la_fe la_channels.nodes_desc: {la_ch_info.nodes_desc}')
         log.debug(f'la_fe la_channels.gs_cd: {la_ch_info.gs_cd}')
         log.debug(f'la_fe la_channels.transport: {la_ch_info.transport}')
