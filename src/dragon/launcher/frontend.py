@@ -688,7 +688,6 @@ Please resubmit your dragon launch command with the `--transport tcp` option set
             try:
                 popen_dict = {}
 
-                import sys, os; print(f"===DMP===> frontend {os.getpid()=} {os.getppid()=} {nodelist=} {[(x, os.environ.get(x)) for x in os.environ if x.startswith('DRAGON_RT_UID')]}", file=sys.stderr, flush=True)
                 for host_name, host_ip_addr in zip(nodelist, node_ip_addrs):
                     args = dlutil.get_wlm_launch_args(args_map=self.args_map,
                                                       hostname=host_name,

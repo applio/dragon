@@ -49,7 +49,6 @@ class OutOfBand:
         env['DRAGON_REMOTE_RT_UID'] = str(remote_rt_uid)
         env[f'DRAGON_RT_UID__{remote_rt_uid}'] = gw_str
         os.environ[f'DRAGON_RT_UID__{remote_rt_uid}'] = gw_str
-        import sys; print(f"===DMP===> {os.getpid()=} {os.environ.get(f'DRAGON_RT_UID__{remote_rt_uid}')=}", file=sys.stderr, flush=True)
 
 
     def start_oob_transport(self, fe_ext_ip_addr=None, head_node_ip_addr=None, port=None):

@@ -64,8 +64,6 @@ def get_ssh_env_vars(args_map=None, propagate_base=BASE_ENV_VARNAMES) -> list[st
 
     #ENV_VARS = all_envs
 
-    import sys, os; print(f"===DMP===> ssh {os.getpid()=} {[(x, os.environ.get(x)) for x in os.environ if x.startswith('DRAGON_RT_UID')]}", file=sys.stderr, flush=True)
-
     # ENV_VARS.extend(
     #     [
     #         f'{varname}={environ.get(varname)}'

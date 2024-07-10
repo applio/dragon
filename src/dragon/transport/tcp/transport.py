@@ -378,7 +378,6 @@ class StreamTransport(Transport, TaskMixin):
         self._oob_connect = False
         self._oob_accept = False
         import inspect; frames = inspect.getouterframes(inspect.currentframe())
-        import sys, os; print(f'===DMP===> transport init {os.getpid()=} {os.getppid()=} {addr.host=} {addr.port=} {frames=}', file=sys.stderr, flush=True)
 
     @run_forever
     async def run(self):
@@ -389,7 +388,6 @@ class StreamTransport(Transport, TaskMixin):
         if self._oob_accept:
             self._server = await asyncio.start_server(self.accept_connection, 'localhost', int(self.addr.port), **self.server_options)
         else:
-            import sys, os; print(f'===DMP===> transport run {os.getpid()=} {os.getppid()=} {self.addr.host=} {self.addr.port=} {self.server_options=}', file=sys.stderr, flush=True)
             self._server = await asyncio.start_server(self.accept_connection, str(self.addr.host), int(self.addr.port), **self.server_options)
         try:
             async with self._server:
@@ -479,7 +477,6 @@ class StreamTransport(Transport, TaskMixin):
             reader, writer = await asyncio.open_connection('localhost', int(addr.port), **opts)
             await self.addr.do_handshake(reader, writer)
         else:
-            import sys, os; print(f'===DMP===> transport _open_connection {os.getpid()=} {os.getppid()=} {addr.host=} {addr.port=} {opts=}', file=sys.stderr, flush=True)
             reader, writer = await asyncio.open_connection(str(addr.host), int(addr.port), **opts)
             addr = await self.addr.do_handshake(reader, writer)
 

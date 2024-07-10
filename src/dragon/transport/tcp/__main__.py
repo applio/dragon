@@ -192,17 +192,14 @@ async def tcp_transport_agent(node_index: str = None,
         # Create transport
         if user_initiated:
             transport = StreamTransport(nodes[int(node_desc.host_id)])
-            import sys; print(f'=================================DMP===> tcp_transport_agent {nodes=} {host_ids=} {ip_addrs=} {user_initiated=} {infrastructure=}', file=sys.stderr, flush=True)
             wait_mode = DEFAULT_WAIT_MODE
         elif infrastructure:
             transport = StreamTransport(nodes[int(get_host_id())])
-            import sys; print(f'=================================DMP===> tcp_transport_agent {nodes=} {host_ids=} {ip_addrs=} {user_initiated=} {infrastructure=}', file=sys.stderr, flush=True)
             wait_mode = IDLE_WAIT
         else:
             hostname = socket.gethostname()
             ip_addr = socket.gethostbyname(hostname)
             local_addr = Address.from_netloc(f'{ip_addr}:{oob_port}')
-            import sys; print(f'=================================DMP===> tcp_transport_agent {nodes=} {hostname=} {ip_addr=} {host_ids=} {ip_addrs=} {user_initiated=} {infrastructure=}', file=sys.stderr, flush=True)
             transport = StreamTransport(local_addr)
             if out_of_band_connect:
                 transport._oob_connect = True
